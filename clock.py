@@ -7,10 +7,10 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 sched = BlockingScheduler()
 
-@sched.scheduled_job('interval', minutes=3)
+@sched.scheduled_job('interval', minutes=1)
 def timed_job():
     print('Starting at:                 {}'.format(datetime.datetime.now()))
-    r = requests.get('https://data.cityofnewyork.us/resource/43nn-pn8j.json?$limit=1')
+    r = requests.get('https://data.cityofnewyork.us/resource/43nn-pn8j.json?$limit=500000')
     data = r.json()
     print('Finished retrieving json at: {}'.format(datetime.datetime.now()))
 
