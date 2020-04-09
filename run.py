@@ -148,13 +148,13 @@ import datetime
 
 def run_gather_inspections():
     print('Starting at:                 {}'.format(datetime.datetime.now()))
-    r = requests.get('https://data.cityofnewyork.us/resource/43nn-pn8j.json?$limit=500000')
+    r = requests.get('https://data.cityofnewyork.us/resource/43nn-pn8j.csv?$limit=2')
     data = r.json()
-    print('Finished retrieving json at: {}'.format(datetime.datetime.now()))
+    print('Finished retrieving csv at: {}'.format(datetime.datetime.now()))
 
     s3 = boto3.resource('s3')
 
-    filename = str(str(datetime.datetime.now())+'.json')
+    filename = str(str(datetime.datetime.now())+'.csv')
     obj = s3.Object('doh-inspection-storage',filename)
     obj.put(Body=json.dumps(data))
 
