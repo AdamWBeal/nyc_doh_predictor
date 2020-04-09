@@ -5,11 +5,10 @@ import datetime
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 
-
 sched = BlockingScheduler()
 
 @sched.get_inspections('interval', minutes=3)
-def get_inspections():
+def timed_job():
     print('Starting at:                 {}'.format(datetime.datetime.now()))
     r = requests.get('https://data.cityofnewyork.us/resource/43nn-pn8j.json?$limit=1')
     data = r.json()
