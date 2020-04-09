@@ -5,6 +5,7 @@ import datetime
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 
+
 sched = BlockingScheduler()
 
 @sched.get_inspections('interval', minutes=3)
