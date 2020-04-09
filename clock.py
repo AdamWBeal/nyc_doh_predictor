@@ -11,7 +11,7 @@ sched = BlockingScheduler()
 def timed_job():
     try:
         print('Starting at:                 {}'.format(datetime.datetime.now()))
-        r = requests.get('https://data.cityofnewyork.us/resource/43nn-pn8j.json?$limit=400000')
+        r = requests.get('https://data.cityofnewyork.us/resource/43nn-pn8j.json?$limit=100000')
         data = r.json()
         print('Finished retrieving json at: {}'.format(datetime.datetime.now()))
 
