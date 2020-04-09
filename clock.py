@@ -45,5 +45,5 @@ def gather_inspections():
 
 
 sched.add_job(gather_inspections)
-sched.add_job(gather_inspections, 'interval', minutes=2)
+sched.add_job(gather_inspections, 'interval', minutes=5)
 sched.start()

@@ -148,7 +148,7 @@ import datetime
 
 def run_gather_inspections():
     print('Starting at:                 {}'.format(datetime.datetime.now()))
-    r = requests.get('https://data.cityofnewyork.us/resource/43nn-pn8j.json?$limit=10')
+    r = requests.get('https://data.cityofnewyork.us/resource/43nn-pn8j.json?$limit=500000')
     data = r.json()
     print('Finished retrieving json at: {}'.format(datetime.datetime.now()))
 
