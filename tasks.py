@@ -7,7 +7,7 @@ def run_gather_inspections():
 
     bucket_name = 'doh-inspection-storage'
     file_name = str(str(datetime.datetime.now())+'.csv')
-    url = 'https://data.cityofnewyork.us/resource/43nn-pn8j.csv?$limit=100000'
+    url = 'https://data.cityofnewyork.us/resource/43nn-pn8j.csv?$limit=500000'
 
     print('Starting at: {}'.format(datetime.datetime.now()))
 
