@@ -39,5 +39,16 @@ word = 'THE'
 # print(df_model)
 
 
-cursor.execute("SELECT * FROM public.rest_table WHERE dba CONTAINS 'the'";)
-cursor.fetchall()
+# cursor.execute("SELECT * FROM public.rest_table WHERE dba CONTAINS 'the'";)
+# cursor.fetchall()
+
+
+
+
+
+
+#
+#
+# try to read in handle, if not pull newest csv from s3
+#
+# assign key to all in handle
