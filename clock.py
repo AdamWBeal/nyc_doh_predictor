@@ -15,6 +15,6 @@ q = Queue(connection=conn)
 def gather_inspections():
   q.enqueue(run_gather_inspections)
 
-sched.add_job(gather_inspections, 'cron', hour=14, misfire_grace_time=60*3)
+sched.add_job(gather_inspections, 'cron', hour=14, minute=45, misfire_grace_time=60*3)
 
 sched.start()
