@@ -11,12 +11,6 @@ def run_gather_inspections():
 
     print('Starting at: {}'.format(datetime.datetime.now()))
 
-    # handle = open(file_name, 'wb')
-    #
-    # for chunk in response.iter_content(chunk_size=512):
-    #     if chunk:
-    #         handle.write(chunk)
-
     r = requests.get(url, stream=True)
 
     with open(file_name, 'wb') as fd:
