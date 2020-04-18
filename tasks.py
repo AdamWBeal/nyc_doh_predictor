@@ -7,7 +7,7 @@ def run_gather_inspections():
 
     bucket_name = 'doh-inspection-storage'
     file_name = str(datetime.datetime.now())+'.json'
-    url = 'https://data.cityofnewyork.us/resource/43nn-pn8j.json?$limit=2000'
+    url = 'https://data.cityofnewyork.us/resource/43nn-pn8j.json?$limit=1000000'
 
     print('Starting at: {}'.format(datetime.datetime.now()))
 
