@@ -6,18 +6,22 @@ import datetime
 def run_gather_inspections():
 
     bucket_name = 'doh-inspection-storage'
-    file_name = str(datetime.datetime.now())+'.json'
-    url = 'https://data.cityofnewyork.us/resource/43nn-pn8j.json?$limit=1000000'
+    file_name = str(datetime.datetime.now())+'.csv'
+    url = 'https://data.cityofnewyork.us/resource/43nn-pn8j.csv?$limit=1000000'
 
     print('Starting at: {}'.format(datetime.datetime.now()))
 
-    # filename = 'data.csv'
-    response = requests.get(url, stream=True)
-    handle = open(file_name, 'wb')
+    # handle = open(file_name, 'wb')
+    #
+    # for chunk in response.iter_content(chunk_size=512):
+    #     if chunk:
+    #         handle.write(chunk)
 
-    for chunk in response.iter_content(chunk_size=512):
-        if chunk:
-            handle.write(chunk)
+    r = requests.get(url, stream=True)
+
+    with open(file_name, 'wb') as fd:
+        for chunk in r.iter_content(chunk_size=128):
+            fd.write(chunk)
 
     print('Finished retrieving csv at: {}'.format(datetime.datetime.now()))
 
