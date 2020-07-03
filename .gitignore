@@ -8,3 +8,6 @@ untitled.ipynb
 testdl.csv
 *.csv
 new_file.csv
+.vscode/
+.ipynb_checkpoints/
+__pycache__/

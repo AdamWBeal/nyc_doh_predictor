@@ -34,95 +34,130 @@ def run_gather_inspections():
     print('Upload complete at: {}'.format(datetime.datetime.now()))
 
 
-
-
-def prepare_data(file):
-
-    df = pd.read_csv(file)
-
-    df = df[(df['inspection_type'].str.contains('Cycle')) | 
-    (df['inspection_type'].str.contains('Pre')) |
-        (pd.isna(df['inspection_type']))]
-
-    df.rename(columns={'record_date': 'last_seen'}, inplace=True)
-    df['violation_code'] = df['violation_code'].apply(lambda x: '' if pd.isna(x) else x)
-    df['score'] = df['score'].apply(lambda x: '' if pd.isna(x) else x)
-
-    df['inspection_date'] = pd.to_datetime(df['inspection_date'])
-    df['last_seen'] = pd.to_datetime(df['last_seen'])
-    df['grade_date'] = pd.to_datetime(df['grade_date'])
-    df['first_seen'] = df['last_seen'].copy()
-
-    df['key'] = df['camis'].astype(str) + df['inspection_date'].astype(str) + df['violation_code']
-    df['key'] = df['key'].apply(lambda x: str(abs(hash(x)))[:12])
-    df['inspection_id'] = df['camis'].astype(str) + df['inspection_date'].astype(str)
-    df['inspection_id'] = df['inspection_id'].apply(lambda x: str(abs(hash(x)))[:12])
-
-    df.sort_values(['camis','inspection_date'], inplace=True)
-    df.drop_duplicates(subset='key',inplace=True)
-    df.reset_index(inplace=True, drop=True)
-
-    print("df processed")
-
-    return df
-
-
-def run_update_db():
-
+def retrieve_latest():
     s3 = boto3.resource('s3')
     bucket = s3.Bucket('doh-inspection-storage')
     f = bucket.objects.filter()
     latest = [obj.key for obj in sorted(f, key=lambda x: x.last_modified, reverse=True)][0]
-    print("Latest file is {}\n".format(latest))
 
     s3 = boto3.client('s3')
     with open('update.csv', 'wb') as f:
         s3.download_fileobj('doh-inspection-storage', latest, f)
 
-    df = prepare_data('update.csv')
+def prepare_data(file):
 
-    engine = create_engine('postgresql://postgres:makers@localhost:5432/new_doh')
+    df = pd.read_csv(file)
 
-    print("Creating temp table for {}\n".format(latest))
+    df = df[['camis', 'dba', 'building', 'street', 'boro', 'inspection_date', 'action', 'score','inspection_type','record_date']]
+    df = df[df['inspection_date']!='1900-01-01T00:00:00.000']
+    df = df[(df['inspection_type'].str.contains('Cycle')) | 
+    (df['inspection_type'].str.contains('Pre')) |
+           (pd.isna(df['inspection_type']))]
 
-    df.to_sql('temp', engine, if_exists="replace", index=False)
-    with engine.connect() as con:
-        con.execute('ALTER TABLE temp ADD PRIMARY KEY (key);')
+    df.rename(columns={'record_date': 'last_seen'}, inplace=True)
+    df['last_seen'] = pd.to_datetime(df['last_seen'])
+    df['inspection_date'] = pd.to_datetime(df['inspection_date'])
 
-    connection = psycopg2.connect(user="postgres",
-                            password="makers",
-                            host='localhost',
-                            port="5432",
-                            database="new_doh")
+    df['inspection_id'] = df['camis'].astype(str) + df['inspection_date'].astype(str)
+    df['rest_label'] = df['dba'] + ', ' + df['building'] + ' ' + df['street'] + ', ' + df['boro']
 
-    cursor = connection.cursor()
+    df['rest_label'] = df['rest_label'].where(pd.notnull(df['rest_label']), df['dba'])
+    
+    df.drop(columns=['dba','building','street','boro'], inplace=True)
 
-    print("Updating Main\n")
-
-    cursor.execute('''UPDATE main
-    SET last_seen = temp.last_seen,
-    score = temp.score,
-    grade = temp.grade 
-    FROM temp
-    WHERE main.key = temp.key;''')
-
-    connection.commit()
-
-    print("Inserting into main\n")
-
-    cursor.execute('''INSERT INTO main
-    SELECT temp.camis, temp.dba, temp.boro, temp.building, temp.street, temp.zipcode, temp.phone, temp.cuisine_description, temp.inspection_date, temp.action, temp.violation_code, temp.violation_description, temp.critical_flag, temp.score, temp.grade, temp.grade_date, temp.last_seen, temp.inspection_type, temp.latitude, temp.longitude, temp.community_board, temp.council_district, temp.census_tract, temp.bin, temp.bbl, temp.nta, temp.first_seen, temp.key, temp.inspection_id
-    FROM temp
-    LEFT OUTER JOIN main ON (main.key = temp.key)
-    WHERE main.key IS NULL;''')
-
-    connection.commit()
-
-    cursor.execute('''DROP TABLE temp;''')
-
-    connection.commit()
-    cursor.close()
-    connection.close()
+    df.sort_values(['camis','inspection_date'], inplace=True)
+    df.drop_duplicates(subset='inspection_id',inplace=True)
+    df.reset_index(inplace=True, drop=True)
 
 
-run_update_db()
+    df['next_grade'] = df['inspection_date'].shift(-1)
+    df.loc[df.drop_duplicates("camis", keep='last').index,'next_grade'] = pd.NaT
+
+    df['time_til'] = df['next_grade'] - df['inspection_date']
+    df['event'] = df['time_til'].apply(lambda x: 1 if pd.notnull(x) else 0)
+    df.reset_index(inplace=True, drop=True)
+
+    df['time_til'] = df['time_til'].dt.days
+    df['time_til'] = df['time_til'].where(pd.notnull(df['time_til']), (df['last_seen'] - df['inspection_date']).dt.days)
+    df = df[df['time_til'] < 500]
+    df['score'] = df['score'].apply(lambda x: float(x))
+    df.reset_index(drop=True, inplace=True)
+
+
+    inspection_bin = []
+
+    for i in range(len(df)):
+        current_type = df.loc[i,'inspection_type']
+        current_score = df.loc[i,'score']
+        current_camis = df.loc[i,'camis']
+        current_action = df.loc[i,'action']
+        current_time = df.loc[i,'time_til']
+        current_event = df.loc[i,'event']
+        
+        if 'losed' in current_action:
+            inspection_bin.append('was_closed')
+            
+        elif 're-open' in current_action:
+            inspection_bin.append('re-opened')
+            
+        elif 'Cycle' in current_type:
+            if 'Initial' in current_type:
+                if (current_score < 14) & (current_event == 1) & (current_time < 300):
+                    inspection_bin.append('cyc_init_1')
+                elif current_score < 14: # This event shouldn't be able to occur
+                    inspection_bin.append('cyc_init_0')
+                elif current_score > 13:
+                    inspection_bin.append('cyc_init_1')
+                    
+            elif 'Re-' in current_type:
+                previous_score = df.loc[i-1,'score']
+                previous_camis = df.loc[i-1,'camis']
+                
+                if current_camis == previous_camis:
+                    if previous_score < 14:
+                        inspection_bin.append('cyc_re_0')
+                    elif previous_score > 13 and previous_score < 28:
+                        inspection_bin.append('cyc_re_1')
+                    elif previous_score > 27:
+                        inspection_bin.append('cyc_re_2')
+                else:
+                    inspection_bin.append('missing_prior_cycle')
+            else:
+                inspection_bin.append('other_cycle')
+                
+                
+        elif 'Pre-' in current_type:
+            if 'Initial' in current_type:
+                if (current_score < 14) & (current_event == 1) & (current_time < 300):
+                    inspection_bin.append('pre_init_1')
+                elif current_score < 14:
+                    inspection_bin.append('pre_init_0')
+                elif current_score > 13:
+                    inspection_bin.append('pre_init_1')
+                    
+            elif 'Re-' in current_type:
+                previous_camis = df.loc[i-1,'camis']
+                previous_score = df.loc[i-1,'score']
+                
+                if current_camis == previous_camis:
+                    if previous_score < 14:
+                        inspection_bin.append('pre_re_0')
+                    elif previous_score > 13 and previous_score < 28:
+                        inspection_bin.append('pre_re_1')
+                    elif previous_score > 27:
+                        inspection_bin.append('pre_re_2')
+                else:
+                    inspection_bin.append('missing_prior_pre')
+            else:
+                inspection_bin.append('other_pre')
+        else:
+            inspection_bin.append('other')
+            
+
+    inspection_bin = pd.Series(inspection_bin)
+
+    df['inspection_bin'] = inspection_bin
+    del(inspection_bin)
+
+
+    return df
