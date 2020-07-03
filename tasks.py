@@ -161,3 +161,21 @@ def prepare_data(file):
 
 
     return df
+
+
+def fit_model()
+    model = prepare_data('update.csv')
+    cph = CoxPHFitter()
+    cph.fit(model[['time_til','event','inspection_bin','score']], duration_col='time_til', event_col='event', strata=['inspection_bin'])
+    censored_subjects = model.loc[~model['event'].astype(bool)]
+    censored_subjects_last_obs = censored_subjects['time_til']
+
+    unconditioned_sf = cph.predict_survival_function(censored_subjects)
+    conditioned_sf = unconditioned_sf.apply(lambda c: (c / c.loc[model.loc[c.name, 'time_til']]).clip_upper(1))
+
+
+    conditioned_sf.columns = censored_subjects.index
+
+    predictions = censored_subjects[['camis','rest_label','inspection_date','time_til']].join(conditioned_sf.T)
+
+
