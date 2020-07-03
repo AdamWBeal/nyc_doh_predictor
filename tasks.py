@@ -2,9 +2,9 @@ import boto3
 import requests
 import json
 import datetime
-import psycopg2
-import sqlalchemy
-from sqlalchemy import create_engine
+# import psycopg2
+# import sqlalchemy
+# from sqlalchemy import create_engine
 import pandas as pd
 
 
@@ -62,7 +62,7 @@ def prepare_data(file):
     df['rest_label'] = df['dba'] + ', ' + df['building'] + ' ' + df['street'] + ', ' + df['boro']
 
     df['rest_label'] = df['rest_label'].where(pd.notnull(df['rest_label']), df['dba'])
-    
+
     df.drop(columns=['dba','building','street','boro'], inplace=True)
 
     df.sort_values(['camis','inspection_date'], inplace=True)
