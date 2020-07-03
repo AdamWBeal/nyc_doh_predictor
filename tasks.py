@@ -163,7 +163,7 @@ def prepare_data(file):
     return df
 
 
-def fit_model()
+def fit_model():
     model = prepare_data('update.csv')
     cph = CoxPHFitter()
     cph.fit(model[['time_til','event','inspection_bin','score']], duration_col='time_til', event_col='event', strata=['inspection_bin'])
