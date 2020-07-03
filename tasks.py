@@ -5,6 +5,7 @@ import datetime
 # import psycopg2
 # import sqlalchemy
 # from sqlalchemy import create_engine
+from lifelines import CoxPHFitter
 import pandas as pd
 
 
